@@ -3,7 +3,7 @@ FROM tinygo/tinygo
 USER root
 
 RUN apt update \
-    && apt install -y git make libtool pkgconf autoconf automake \
+    && apt install -y git ssh make libtool pkgconf autoconf automake \
     texinfo libusb-1.0-0 libusb-1.0-0-dev libjaylink0 \
     && apt -y clean \
     && apt -y autoremove \
