@@ -1,12 +1,17 @@
 package main
 
 import (
-	// "machine"
-
 	"machine"
+	"math"
 	"strconv"
 	"time"
+
+	"tinygo.org/x/drivers/bme280"
 )
+
+func roundFloat(val float32) float32 {
+	return float32(math.Round(float64(val*100)) / 100)
+}
 
 func formatAddress(value uint16) string {
 	return strconv.FormatInt(int64(value), 16)
@@ -14,25 +19,32 @@ func formatAddress(value uint16) string {
 }
 
 func main() {
-	i2c := machine.I2C0
 	machine.I2C0.Configure(machine.I2CConfig{})
+	sensor := bme280.New(machine.I2C0)
+	sensor.Configure()
 
-	write := []byte{0x75}
-	receive := make([]byte, 1)
+	connected := sensor.Connected()
+	if !connected {
+		println("BME280 not detected")
+		return
+	}
+	println("BME280 detected")
+
 	for {
+		temp, _ := sensor.ReadTemperature()
+		println("Temperature:", roundFloat(float32(temp)/1000), "°C")
 
-		for address := uint16(0); address <= uint16(127); address++ {
-			err := i2c.Tx(address, write, receive)
-			if err != nil {
-				println("I2C device not found on: 0x" + formatAddress(address))
-			} else {
-				println("\nFound I2C device on: 0x" + formatAddress(address) + "\n")
+		pressure, _ := sensor.ReadPressure()
+		println("Pressure:", float32(pressure)/100000, "hPa")
 
-			}
-		}
+		humidity, _ := sensor.ReadHumidity()
+		println("Humidity:", humidity/100, "%")
 
-		println("----------------")
+		altitude, _ := sensor.ReadAltitude()
+		println("Altitude:", altitude, "m")
 
-		time.Sleep(time.Second * 5)
+		println("-------------------------------")
+
+		time.Sleep(2 * time.Second)
 	}
 }

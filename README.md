@@ -41,6 +41,11 @@ tinygo monitor -baudrate 115200
 
 ```
 
+## Connection Diagram
+
+![connection diagram](./diagram.png)
+
+
 ## STM32 "Blue Pill" Pin Diagram
 
 ![pinout](./STM32-Pin-Details.png)
@@ -48,6 +53,7 @@ tinygo monitor -baudrate 115200
 ## References
 
 - [ST Micro STM32F103XX "Bluepill"](https://tinygo.org/docs/reference/microcontrollers/bluepill/)
+- [Blue Pill](https://stm32-base.org/boards/STM32F103C8T6-Blue-Pill.html)
 - [Blinking LED](https://tinygo.org/docs/tutorials/blinky/)
 - [Container tinygo/tinygo](https://hub.docker.com/r/tinygo/tinygo)
 - [Unable to start debug session with OpenOCD/Clion](https://stackoverflow.com/questions/71608471/unable-to-start-debug-session-with-openocd-clion)
