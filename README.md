@@ -60,3 +60,5 @@ tinygo monitor -baudrate 115200
 - [STMicroelectronics/OpenOCD](https://github.com/STMicroelectronics/OpenOCD)
 - [Developing inside a Container](https://code.visualstudio.com/docs/devcontainers/containers)
 - [Using the I2C Bus](https://www.robot-electronics.co.uk/i2c-tutorial)
+- [Go by Example](https://gobyexample.com/)
+- [Go Slices: usage and internals](https://go.dev/blog/slices-intro)

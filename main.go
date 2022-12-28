@@ -2,20 +2,24 @@ package main
 
 import (
 	"machine"
-	"math"
 	"strconv"
 	"time"
 
 	"tinygo.org/x/drivers/bme280"
 )
 
-func roundFloat(val float32) float32 {
-	return float32(math.Round(float64(val*100)) / 100)
+func formatFloat(value float32, precision int) string {
+	return strconv.FormatFloat(float64(value), 'f', precision, 64)
 }
 
-func formatAddress(value uint16) string {
-	return strconv.FormatInt(int64(value), 16)
+func makeSeparator(length int, char byte) string {
+	slice := make([]byte, length, length)
 
+	for i := range slice {
+		slice[i] = char
+	}
+
+	return string(slice)
 }
 
 func main() {
@@ -30,20 +34,22 @@ func main() {
 	}
 	println("BME280 detected")
 
+	var separator = makeSeparator(37, '~')
+
 	for {
 		temp, _ := sensor.ReadTemperature()
-		println("Temperature:", roundFloat(float32(temp)/1000), "°C")
+		println("Temperature:", formatFloat(float32(temp)/1000, 2), "°C")
 
 		pressure, _ := sensor.ReadPressure()
-		println("Pressure:", float32(pressure)/100000, "hPa")
+		println("Pressure:", formatFloat(float32(pressure)/1000000, 2), "kPa, (", formatFloat(float32(pressure)/100000, 2), "hPa)")
 
 		humidity, _ := sensor.ReadHumidity()
-		println("Humidity:", humidity/100, "%")
+		println("Humidity:", formatFloat(float32(humidity)/100, 1), "%")
 
 		altitude, _ := sensor.ReadAltitude()
 		println("Altitude:", altitude, "m")
 
-		println("-------------------------------")
+		println(separator)
 
 		time.Sleep(2 * time.Second)
 	}
