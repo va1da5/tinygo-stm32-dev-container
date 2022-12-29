@@ -17,17 +17,15 @@ func main() {
 	i2c := machine.I2C0
 	machine.I2C0.Configure(machine.I2CConfig{})
 
-	write := []byte{0x75}
-	receive := make([]byte, 1)
+	empty := []byte{}
 	for {
 
 		for address := uint16(0); address <= uint16(127); address++ {
-			err := i2c.Tx(address, write, receive)
+			err := i2c.Tx(address, empty, empty)
 			if err != nil {
 				println("I2C device not found on: 0x" + formatAddress(address))
 			} else {
 				println("\nFound I2C device on: 0x" + formatAddress(address) + "\n")
-
 			}
 		}
 
