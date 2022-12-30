@@ -28,7 +28,17 @@ const (
 	flagMSL     = 0x00100001
 )
 
-var errI2CBufferEmpty = errors.New("I2C buffer empty")
+var (
+	errI2CWriteTimeout       = errors.New("I2C timeout during write")
+	errI2CReadTimeout        = errors.New("I2C timeout during read")
+	errI2CBusReadyTimeout    = errors.New("I2C timeout on bus ready")
+	errI2CSignalStartTimeout = errors.New("I2C timeout on signal start")
+	errI2CSignalReadTimeout  = errors.New("I2C timeout on signal read")
+	errI2CSignalStopTimeout  = errors.New("I2C timeout on signal stop")
+	errI2CAckExpected        = errors.New("I2C error: expected ACK not NACK")
+	errI2CBusError           = errors.New("I2C bus error")
+	errI2CBufferEmpty        = errors.New("I2C buffer empty")
+)
 
 type I2CWrapper struct {
 	Buffer       *machine.RingBuffer
@@ -36,12 +46,14 @@ type I2CWrapper struct {
 	Bus          *stm32.I2C_Type
 	Interrupt_EV interrupt.Interrupt
 	Interrupt_ER interrupt.Interrupt
+	Response     []byte
 }
 
 var (
 	I2C  = &_I2C // I2C contains address of _I2C instance
 	_I2C = I2CWrapper{
-		Buffer: machine.NewRingBuffer(),
+		Buffer:   machine.NewRingBuffer(),
+		Response: []byte{0xde, 0xed, 0xbe, 0xef, 0x00},
 	}
 )
 
@@ -108,20 +120,33 @@ func (i2c *I2CWrapper) hasFlag(flag uint32) bool {
 	}
 }
 
+func (i2c *I2CWrapper) clearFlagADDR() {
+	i2c.Bus.SR1.Get()
+	i2c.Bus.SR2.Get()
+}
+
 func (i2c *I2CWrapper) handleInterrupt(interrupt.Interrupt) {
 	if i2c.hasFlag(flagBUSY) {
 		i2c.Bus.CR1.SetBits(stm32.I2C_CR1_ACK)
 	}
 
+	// Executed when DATA WRITE command is sent to the slave
 	if i2c.hasFlag(flagRXNE) {
 		i2c.Receive(byte((i2c.Bus.DR.Get() & 0xFF)))
 		i2c.Bus.CR1.SetBits(stm32.I2C_CR1_ACK)
+	}
+
+	// Executed when DATA READ command is sent to the slave
+	if i2c.hasFlag(flagTXE) {
+		i2c.controllerTransmit(i2c.Response)
 	}
 
 	if i2c.hasFlag(flagSTOPF) {
 		i2c.Bus.SR1.Get()
 		i2c.Bus.CR1.ClearBits(stm32.I2C_CR1_STOP_Stop << stm32.I2C_CR1_STOP_Pos)
 	}
+
+	// println(i2c.DebugSR())
 }
 
 func (i2c *I2CWrapper) SetInterrupt() {
@@ -187,4 +212,83 @@ func (i2c *I2CWrapper) ReadByte() (byte, error) {
 		return 0, errI2CBufferEmpty
 	}
 	return buf, nil
+}
+
+func (i2c *I2CWrapper) controllerTransmit(w []byte) error {
+
+	// disable POS
+	i2c.Bus.CR1.ClearBits(stm32.I2C_CR1_POS)
+
+	pos := 0
+	rem := len(w)
+
+	// clear ADDR flag
+	i2c.clearFlagADDR()
+
+	for rem > 0 {
+		// wait for TXE flag set
+		if !i2c.waitForFlagOrError(flagTXE, true) {
+			return errI2CAckExpected
+		}
+
+		// write data to DR
+		i2c.Bus.DR.Set(uint32(w[pos]))
+		// update counters
+		pos++
+		rem--
+
+		if i2c.hasFlag(flagBTF) && rem != 0 {
+			// write data to DR
+			i2c.Bus.DR.Set(uint32(w[pos]))
+			// update counters
+			pos++
+			rem--
+		}
+
+		// wait for transfer finished flag BTF set
+		if !i2c.waitForFlagOrError(flagBTF, true) {
+			return errI2CWriteTimeout
+		}
+	}
+
+	// generate stop condition
+	i2c.Bus.CR1.SetBits(stm32.I2C_CR1_STOP)
+
+	return nil
+}
+
+func (i2c *I2CWrapper) waitForFlagOrError(flag uint32, set bool) bool {
+	const tryMax = 10000
+	hasFlag := false
+	for i := 0; !hasFlag && i < tryMax; i++ {
+		if hasFlag = i2c.hasFlag(flag) == set; !hasFlag {
+			// check for ACK failure
+			if i2c.hasFlag(flagAF) {
+				// generate stop condition
+				i2c.Bus.CR1.SetBits(stm32.I2C_CR1_STOP)
+				// clear pending flags
+				i2c.clearFlag(flagAF)
+				return false
+			} else if i2c.hasFlag(flagSTOPF) {
+				// clear stop flag
+				i2c.clearFlag(flagSTOPF)
+				return false
+			}
+		}
+	}
+	return hasFlag
+}
+
+func (i2c *I2CWrapper) clearFlag(flag uint32) {
+	const mask = 0x0000FFFF
+	i2c.Bus.SR1.Set(^(flag & mask))
+}
+
+func (i2c *I2CWrapper) waitForFlag(flag uint32, set bool) bool {
+	const tryMax = 10000
+	hasFlag := false
+	for i := 0; !hasFlag && i < tryMax; i++ {
+		hasFlag = i2c.hasFlag(flag) == set
+	}
+	return hasFlag
 }

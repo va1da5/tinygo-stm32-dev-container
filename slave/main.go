@@ -41,7 +41,7 @@ func main() {
 				println("Error reading data")
 			}
 
-			print("Data:")
+			print("Data received:")
 			for i := 0; i < len(data); i++ {
 				print(" " + formatAddress(int64(data[i])))
 			}
@@ -49,6 +49,8 @@ func main() {
 		}
 
 		println("alive")
+
+		// println(i2c.DebugSR())
 
 		time.Sleep(time.Second * 1)
 
