@@ -1,6 +1,7 @@
 # TinyGo on STM32 Blue Pill
 
-The repo contains a basic I2C usage samples. It focuses on providing an initial development environment for Tinygo with STM32 "Blue Pill". The development should be done in a container environment simplifying setup on different systems (*had issues on Fedora 37*).
+The branch contains I2C communication example from master to slave, where each node is STM32 "Blue Pill" micro controller. Tinygo does not support I2C in a slave mode out-of-the-box for STM32. This task required to analyze I2C registries and perform required adjustments to get it working.
+
 
 ## Development Container
 

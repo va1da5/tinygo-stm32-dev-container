@@ -39,7 +39,7 @@ type I2CWrapper struct {
 }
 
 var (
-	I2C  = &_I2C // I2C0 contains address of _I2C0 instance
+	I2C  = &_I2C // I2C contains address of _I2C instance
 	_I2C = I2CWrapper{
 		Buffer: machine.NewRingBuffer(),
 	}
